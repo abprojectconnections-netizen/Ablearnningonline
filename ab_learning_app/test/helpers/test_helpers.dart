@@ -6,6 +6,7 @@ import 'package:ab_learning_app/features/certificates/data/certificates_reposito
 import 'package:ab_learning_app/features/community/data/community_repository.dart';
 import 'package:ab_learning_app/features/explore/data/explore_repository.dart';
 import 'package:ab_learning_app/features/learn/data/learn_repository.dart';
+import 'package:ab_learning_app/features/live/data/live_repository.dart';
 import 'package:ab_learning_app/features/notifications/data/notifications_repository.dart';
 import 'package:ab_learning_app/features/reviews/data/reviews_repository.dart';
 import 'package:ab_learning_app/features/wallet/data/wallet_repository.dart';
@@ -38,6 +39,7 @@ void installMockAuth() {
     AppDependencies.certificatesRepository =
         const OfflineCertificatesRepository();
     AppDependencies.communityRepository = const OfflineCommunityRepository();
+    AppDependencies.liveRepository = const OfflineLiveRepository();
   });
   tearDown(AppDependencies.reset);
 }

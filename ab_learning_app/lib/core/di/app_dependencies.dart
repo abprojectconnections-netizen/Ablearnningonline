@@ -5,6 +5,7 @@ import '../../features/checkout/data/orders_repository.dart';
 import '../../features/community/data/community_repository.dart';
 import '../../features/explore/data/explore_repository.dart';
 import '../../features/learn/data/learn_repository.dart';
+import '../../features/live/data/live_repository.dart';
 import '../../features/notifications/data/notifications_repository.dart';
 import '../../features/quiz/data/quiz_repository.dart';
 import '../../features/reviews/data/reviews_repository.dart';
@@ -30,6 +31,7 @@ class AppDependencies {
   static QuizRepository? _quiz;
   static CertificatesRepository? _certificates;
   static CommunityRepository? _community;
+  static LiveRepository? _live;
 
   /// One client (and token store) shared by every API repository.
   static RestClient get apiClient =>
@@ -119,6 +121,12 @@ class AppDependencies {
   static set communityRepository(CommunityRepository value) =>
       _community = value;
 
+  static LiveRepository get liveRepository => _live ??= ApiConfig.useMockAuth
+      ? const OfflineLiveRepository()
+      : ApiLiveRepository(apiClient);
+
+  static set liveRepository(LiveRepository value) => _live = value;
+
   static void reset() {
     _client = null;
     _auth = null;
@@ -133,5 +141,6 @@ class AppDependencies {
     _quiz = null;
     _certificates = null;
     _community = null;
+    _live = null;
   }
 }

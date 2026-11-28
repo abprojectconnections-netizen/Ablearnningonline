@@ -47,6 +47,9 @@ import '../../features/profile/presentation/portfolio_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/profile/presentation/settings_screen.dart';
 import '../../features/profile/presentation/wallet_screen.dart';
+import '../../features/live/presentation/instructor_live_screen.dart';
+import '../../features/live/presentation/live_detail_screen.dart';
+import '../../features/live/presentation/live_list_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/reviews/presentation/course_reviews_screen.dart';
 import '../../features/tutor/presentation/ai_tutor_screen.dart';
@@ -179,6 +182,13 @@ class AppRouter {
             path: '/portfolio',
             builder: (context, state) => const PortfolioScreen()),
         // Any signed-in role: not listed in _rolePrefixForPath on purpose.
+        GoRoute(
+            path: '/live', builder: (context, state) => const LiveListScreen()),
+        GoRoute(
+          path: '/live/:id',
+          builder: (context, state) =>
+              LiveDetailScreen(sessionId: state.pathParameters['id'] ?? ''),
+        ),
         GoRoute(
             path: '/notifications',
             builder: (context, state) => const NotificationsScreen()),

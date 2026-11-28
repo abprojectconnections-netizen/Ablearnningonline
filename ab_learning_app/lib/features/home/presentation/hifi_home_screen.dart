@@ -243,7 +243,7 @@ class _LiveRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _HScroll(children: [_liveCard(live, width: 180)]);
+    return _HScroll(children: [_LiveCard(live, width: 180)]);
   }
 }
 
@@ -374,7 +374,7 @@ class _HomeDesktop extends StatelessWidget {
                       const _SectionTitle('Live กำลังจะเริ่ม'),
                       const SizedBox(height: 12),
                       CardGrid(
-                          columns: 3, children: [_liveCard(content.live!)]),
+                          columns: 3, children: [_LiveCard(content.live!)]),
                     ],
                   ],
                 ),
@@ -406,17 +406,27 @@ Widget _recommendedCard(
   );
 }
 
-Widget _liveCard(HomeLive live, {double? width}) {
-  return GradientCourseCard(
-    width: width,
-    title: live.title,
-    gradient: AppGradients.live,
-    meta: Row(
-      children: [
-        StatusPill(label: live.startsIn, variant: StatusPillVariant.live),
-      ],
-    ),
-  );
+/// Opens the Live schedule, where the learner can register.
+class _LiveCard extends StatelessWidget {
+  const _LiveCard(this.live, {this.width});
+
+  final HomeLive live;
+  final double? width;
+
+  @override
+  Widget build(BuildContext context) {
+    return GradientCourseCard(
+      width: width,
+      title: live.title,
+      gradient: AppGradients.live,
+      onTap: () => context.push('/live'),
+      meta: Row(
+        children: [
+          StatusPill(label: live.startsIn, variant: StatusPillVariant.live),
+        ],
+      ),
+    );
+  }
 }
 
 class _SectionTitle extends StatelessWidget {

@@ -77,15 +77,15 @@ const List<RoleNavItem> learnerBottomTabs = <RoleNavItem>[
 const List<RoleNavItem> learnerSidebar = <RoleNavItem>[
   RoleNavItem('Home', Icons.home_rounded, '/home'),
   RoleNavItem('Explore', Icons.search_rounded, '/explore'),
-  RoleNavItem('My Learning', Icons.menu_book_rounded, null),
-  RoleNavItem('Live', Icons.live_tv_rounded, null),
-  RoleNavItem('Community', Icons.forum_rounded, null),
-  RoleNavItem('AI Tutor', Icons.smart_toy_rounded, null),
+  RoleNavItem('My Learning', Icons.menu_book_rounded, '/learn'),
+  RoleNavItem('Live', Icons.live_tv_rounded, '/live'),
+  RoleNavItem('Community', Icons.forum_rounded, '/community'),
+  RoleNavItem('AI Tutor', Icons.smart_toy_rounded, '/tutor'),
   RoleNavItem('Career', Icons.trending_up_rounded, null),
-  RoleNavItem('Portfolio', Icons.badge_rounded, null),
+  RoleNavItem('Portfolio', Icons.badge_rounded, '/portfolio'),
   RoleNavItem('Jobs', Icons.work_rounded, null),
-  RoleNavItem('Wallet', Icons.account_balance_wallet_rounded, null),
-  RoleNavItem('Settings', Icons.settings_rounded, null),
+  RoleNavItem('Wallet', Icons.account_balance_wallet_rounded, '/wallet'),
+  RoleNavItem('Settings', Icons.settings_rounded, '/settings'),
 ];
 
 /// Business roles (Instructor / Corp / Employer / Admin) use the SAME

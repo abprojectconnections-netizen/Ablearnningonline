@@ -183,35 +183,6 @@ class _InstructorCreateCourseScreenState
       );
 }
 
-class InstructorLiveScreen extends StatelessWidget {
-  const InstructorLiveScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Live Sessions')),
-        body: Center(
-            child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.podcasts_outlined,
-                      size: 48, color: AppColors.textSecondary),
-                  const SizedBox(height: 12),
-                  const Text('ถ่ายทอดสดยังไม่พร้อมใช้งาน',
-                      style: AppTypography.h2),
-                  const SizedBox(height: 6),
-                  Text('การสตรีมต้องเชื่อมต่อบริการวิดีโอและสิทธิ์อุปกรณ์ก่อน',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.body
-                          .copyWith(color: AppColors.textSecondary)),
-                  const SizedBox(height: 14),
-                  OutlinedButton.icon(
-                      onPressed: () => context.push('/instructor/courses'),
-                      icon: const Icon(Icons.video_library_outlined),
-                      label: const Text('จัดการคอร์ส'))
-                ]))),
-      );
-}
-
 class InstructorAnalyticsScreen extends StatelessWidget {
   const InstructorAnalyticsScreen({super.key});
 
