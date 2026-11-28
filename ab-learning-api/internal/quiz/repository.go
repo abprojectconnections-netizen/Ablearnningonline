@@ -69,6 +69,29 @@ func (r *Repository) FindQuizByCourse(ctx context.Context, courseID int64) (Quiz
 	return q, nil
 }
 
+// FindQuizByLesson returns the quiz attached to one lesson.
+func (r *Repository) FindQuizByLesson(ctx context.Context, lessonID int64) (Quiz, error) {
+	var q Quiz
+	var lesson sql.NullInt64
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, course_id, lesson_id, title, pass_score_pct
+		FROM quizzes
+		WHERE lesson_id = ?
+		ORDER BY id ASC
+		LIMIT 1
+	`, lessonID).Scan(&q.ID, &q.CourseID, &lesson, &q.Title, &q.PassScorePct)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Quiz{}, ErrQuizNotFound
+	}
+	if err != nil {
+		return Quiz{}, fmt.Errorf("find lesson quiz: %w", err)
+	}
+	if lesson.Valid {
+		q.LessonID = &lesson.Int64
+	}
+	return q, nil
+}
+
 // ListQuestions returns the quiz's questions in display order, with the
 // choices decoded from the JSON column back into structs.
 func (r *Repository) ListQuestions(ctx context.Context, quizID int64) ([]Question, error) {

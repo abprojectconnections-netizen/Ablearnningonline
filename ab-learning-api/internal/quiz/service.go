@@ -15,6 +15,7 @@ import (
 type Store interface {
 	FindQuizByID(ctx context.Context, id int64) (Quiz, error)
 	FindQuizByCourse(ctx context.Context, courseID int64) (Quiz, error)
+	FindQuizByLesson(ctx context.Context, lessonID int64) (Quiz, error)
 	ListQuestions(ctx context.Context, quizID int64) ([]Question, error)
 	SaveAttempt(ctx context.Context, quizID, userID int64, answers map[string]string, scorePct float64, passed bool, breakdown map[string]float64) (int64, error)
 	ListAttempts(ctx context.Context, quizID, userID int64) ([]Attempt, error)
@@ -58,6 +59,23 @@ func (s *Service) GetCourseQuiz(ctx context.Context, courseID int64) (QuizRespon
 		return QuizResponse{}, err
 	}
 
+	questions, err := s.store.ListQuestions(ctx, quiz.ID)
+	if err != nil {
+		return QuizResponse{}, err
+	}
+	return toQuizResponse(quiz, questions), nil
+}
+
+// GetLessonQuiz implements GET /lessons/{id}/quiz — the quiz attached to one
+// lesson, which is how the player opens a quiz lesson.
+func (s *Service) GetLessonQuiz(ctx context.Context, lessonID int64) (QuizResponse, error) {
+	quiz, err := s.store.FindQuizByLesson(ctx, lessonID)
+	if errors.Is(err, ErrQuizNotFound) {
+		return QuizResponse{}, platform.ErrNotFound("This lesson has no quiz.")
+	}
+	if err != nil {
+		return QuizResponse{}, err
+	}
 	questions, err := s.store.ListQuestions(ctx, quiz.ID)
 	if err != nil {
 		return QuizResponse{}, err

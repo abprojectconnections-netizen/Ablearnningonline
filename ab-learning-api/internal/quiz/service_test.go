@@ -44,6 +44,15 @@ func (f *fakeStore) FindQuizByCourse(_ context.Context, courseID int64) (Quiz, e
 	return Quiz{}, ErrQuizNotFound
 }
 
+func (f *fakeStore) FindQuizByLesson(_ context.Context, lessonID int64) (Quiz, error) {
+	for _, q := range f.quizzes {
+		if q.LessonID != nil && *q.LessonID == lessonID {
+			return q, nil
+		}
+	}
+	return Quiz{}, ErrQuizNotFound
+}
+
 func (f *fakeStore) ListQuestions(_ context.Context, quizID int64) ([]Question, error) {
 	return f.questions[quizID], nil
 }
@@ -165,6 +174,26 @@ func TestGetCourseQuizResolvesByCourse(t *testing.T) {
 	}
 
 	_, err = service.GetCourseQuiz(context.Background(), 424242)
+	wantStatus(t, err, 404)
+}
+
+func TestGetLessonQuizResolvesByLesson(t *testing.T) {
+	store := newFakeStore()
+	quiz, questions := twoQuestionQuiz()
+	lesson := int64(55)
+	quiz.LessonID = &lesson
+	store.addQuiz(quiz, questions...)
+	service := NewService(store, nil)
+
+	resp, err := service.GetLessonQuiz(context.Background(), 55)
+	if err != nil {
+		t.Fatalf("get lesson quiz: %v", err)
+	}
+	if resp.ID != 1 || len(resp.Questions) != 2 {
+		t.Fatalf("expected quiz 1 with 2 questions, got %+v", resp)
+	}
+
+	_, err = service.GetLessonQuiz(context.Background(), 56)
 	wantStatus(t, err, 404)
 }
 

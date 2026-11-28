@@ -60,6 +60,9 @@ func main() {
 		if err := database.SeedDev(db); err != nil {
 			log.Fatalf("seed: %v", err)
 		}
+		if err := database.SeedDevQuizzes(db); err != nil {
+			log.Fatalf("seed quizzes: %v", err)
+		}
 	}
 
 	mux := http.NewServeMux()

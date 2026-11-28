@@ -22,6 +22,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux, protected func(http.Handler
 	mux.Handle("POST /api/v1/quizzes/{id}/submit", protected(http.HandlerFunc(h.submit)))
 	mux.Handle("GET /api/v1/quizzes/{id}/attempts", protected(http.HandlerFunc(h.history)))
 	mux.Handle("GET /api/v1/courses/{id}/quiz", protected(http.HandlerFunc(h.getCourseQuiz)))
+	mux.Handle("GET /api/v1/lessons/{id}/quiz", protected(http.HandlerFunc(h.getLessonQuiz)))
 }
 
 // getQuiz implements GET /quizzes/{id} (screen 14).
@@ -51,6 +52,21 @@ func (h *Handler) getCourseQuiz(w http.ResponseWriter, r *http.Request) {
 	}
 
 	quiz, err := h.service.GetCourseQuiz(r.Context(), courseID)
+	if err != nil {
+		platform.WriteError(w, err)
+		return
+	}
+	platform.WriteJSON(w, http.StatusOK, quiz)
+}
+
+// getLessonQuiz implements GET /lessons/{id}/quiz (screen 14 from the player).
+func (h *Handler) getLessonQuiz(w http.ResponseWriter, r *http.Request) {
+	lessonID, err := platform.ParseID(r.PathValue("id"), "lesson")
+	if err != nil {
+		platform.WriteError(w, err)
+		return
+	}
+	quiz, err := h.service.GetLessonQuiz(r.Context(), lessonID)
 	if err != nil {
 		platform.WriteError(w, err)
 		return
