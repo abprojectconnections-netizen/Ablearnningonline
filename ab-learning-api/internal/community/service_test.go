@@ -246,3 +246,37 @@ func TestHTTPStatusCodes(t *testing.T) {
 		}
 	}
 }
+
+func TestWritesAreLimitedPerUser(t *testing.T) {
+	repo := &memRepo{}
+	mux := http.NewServeMux()
+	NewHandler(NewService(repo)).RegisterRoutes(mux, platform.RequireAuth(fakeVerifier{}))
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	post := func(token string) int {
+		req, _ := http.NewRequest("POST", srv.URL+"/api/v1/community/posts", bytes.NewBufferString(`{"content":"hi"}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	for i := 0; i < WritesPerMinute; i++ {
+		if got := post("u1"); got != 201 {
+			t.Fatalf("post %d: status %d, want 201", i+1, got)
+		}
+	}
+	if got := post("u1"); got != http.StatusTooManyRequests {
+		t.Fatalf("post over the limit: status %d, want 429", got)
+	}
+	if got := post("u2"); got != 201 {
+		t.Fatalf("another user must not be limited by u1: status %d", got)
+	}
+	if len(repo.posts) != WritesPerMinute+1 {
+		t.Fatalf("stored %d posts, want %d", len(repo.posts), WritesPerMinute+1)
+	}
+}

@@ -4,22 +4,41 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/ablearning/api/internal/platform"
 )
 
-type Handler struct{ svc *Service }
+// Per-user write limits, on top of the API-wide per-IP limit.
+const (
+	WritesPerMinute = 10 // new posts and comments together
+	LikesPerMinute  = 60
+)
 
-func NewHandler(svc *Service) *Handler { return &Handler{svc: svc} }
+type Handler struct {
+	svc        *Service
+	writeLimit func(http.Handler) http.Handler
+	likeLimit  func(http.Handler) http.Handler
+}
+
+func NewHandler(svc *Service) *Handler {
+	return &Handler{
+		svc:        svc,
+		writeLimit: platform.RateLimitByUser(WritesPerMinute, time.Minute),
+		likeLimit:  platform.RateLimitByUser(LikesPerMinute, time.Minute),
+	}
+}
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux, protected func(http.Handler) http.Handler) {
+	write := func(f http.HandlerFunc) http.Handler { return protected(h.writeLimit(f)) }
+	like := func(f http.HandlerFunc) http.Handler { return protected(h.likeLimit(f)) }
 	mux.Handle("GET /api/v1/community/posts", protected(http.HandlerFunc(h.feed)))
-	mux.Handle("POST /api/v1/community/posts", protected(http.HandlerFunc(h.create)))
+	mux.Handle("POST /api/v1/community/posts", write(h.create))
 	mux.Handle("DELETE /api/v1/community/posts/{id}", protected(http.HandlerFunc(h.delete)))
-	mux.Handle("POST /api/v1/community/posts/{id}/like", protected(http.HandlerFunc(h.like)))
-	mux.Handle("DELETE /api/v1/community/posts/{id}/like", protected(http.HandlerFunc(h.unlike)))
+	mux.Handle("POST /api/v1/community/posts/{id}/like", like(h.like))
+	mux.Handle("DELETE /api/v1/community/posts/{id}/like", like(h.unlike))
 	mux.Handle("GET /api/v1/community/posts/{id}/comments", protected(http.HandlerFunc(h.comments)))
-	mux.Handle("POST /api/v1/community/posts/{id}/comments", protected(http.HandlerFunc(h.comment)))
+	mux.Handle("POST /api/v1/community/posts/{id}/comments", write(h.comment))
 }
 
 func mapError(err error) error {
