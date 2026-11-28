@@ -178,8 +178,7 @@ void main() {
     expect(find.text('♥ 2'), findsOneWidget);
   });
 
-  testWidgets('only my post has a delete button, and it asks first',
-      (t) async {
+  testWidgets('only my post has a delete button, and it asks first', (t) async {
     final repo = _FakeCommunity();
     await _pump(t, repo);
     expect(find.byTooltip('ลบโพสต์'), findsOneWidget);
@@ -191,8 +190,7 @@ void main() {
     expect(find.text('โพสต์ของฉัน'), findsNothing);
   });
 
-  testWidgets('comments sheet adds a comment and updates the count',
-      (t) async {
+  testWidgets('comments sheet adds a comment and updates the count', (t) async {
     final repo = _FakeCommunity();
     await _pump(t, repo);
     await t.tap(find.byKey(const ValueKey('comments-1')));
