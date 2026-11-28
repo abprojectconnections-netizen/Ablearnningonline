@@ -23,6 +23,7 @@ import (
 	"github.com/ablearning/api/internal/httpx"
 	"github.com/ablearning/api/internal/instructor"
 	"github.com/ablearning/api/internal/learning"
+	"github.com/ablearning/api/internal/live"
 	"github.com/ablearning/api/internal/middleware"
 	"github.com/ablearning/api/internal/notifications"
 	"github.com/ablearning/api/internal/payments"
@@ -94,6 +95,7 @@ func main() {
 	reviews.NewHandler(reviews.NewService(reviews.NewRepository(db))).RegisterRoutes(mux, protected)
 	wallet.NewHandler(wallet.NewService(wallet.NewRepository(db), cfg.PaymentMode == "sandbox")).RegisterRoutes(mux, protected)
 	community.NewHandler(community.NewService(community.NewRepository(db))).RegisterRoutes(mux, protected)
+	live.NewHandler(live.NewService(live.NewRepository(db))).RegisterRoutes(mux, protected)
 	payments.NewHandler(payments.NewService(payments.NewRepository(db), payments.NewSandboxProvider(cfg.PaymentWebhookSecret))).RegisterRoutes(mux, protected)
 	instructor.Register(mux, guard, instructor.NewService(instructor.NewRepository(db)), instructor.Uploader{
 		Dir: cfg.UploadDir, MaxVideo: cfg.MaxVideoMB << 20, MaxImage: 5 << 20,
