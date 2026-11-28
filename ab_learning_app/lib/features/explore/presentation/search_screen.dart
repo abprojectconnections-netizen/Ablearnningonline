@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/di/app_dependencies.dart';
 import '../../../core/router/nav_targets.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/typography.dart';
@@ -9,6 +12,7 @@ import '../../../core/widgets/hifi_text_field.dart';
 import '../../../core/widgets/gradient_course_card.dart';
 import '../../../core/widgets/responsive.dart';
 import '../data/course_catalog_sample.dart';
+import '../data/explore_repository.dart';
 import 'course_list_tile.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -22,21 +26,79 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   late final TextEditingController _controller;
+  List<CatalogCourse> _apiResults = const [];
+  bool _searching = false;
+  bool _failed = false;
+  Timer? _debounce;
+  int _requestSeq = 0;
+
+  ExploreRepository get _repo => AppDependencies.exploreRepository;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialQuery);
+    if (!_repo.bundledOnly) _search();
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  List<CatalogCourse> get _results =>
-      CourseCatalogSample.search(_controller.text);
+  List<CatalogCourse> get _results => _repo.bundledOnly
+      ? CourseCatalogSample.search(_controller.text)
+      : _apiResults;
+
+  void _onChanged(String _) {
+    if (!_repo.bundledOnly) {
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 300), _search);
+    }
+    setState(() {});
+  }
+
+  /// Asks the server; a slower, older answer never replaces a newer one.
+  Future<void> _search() async {
+    final seq = ++_requestSeq;
+    setState(() {
+      _searching = true;
+      _failed = false;
+    });
+    try {
+      final results = await _repo.courses(query: _controller.text);
+      if (!mounted || seq != _requestSeq) return;
+      setState(() {
+        _apiResults = results;
+        _searching = false;
+      });
+    } on Object catch (e) {
+      debugPrint('search failed: $e');
+      if (!mounted || seq != _requestSeq) return;
+      setState(() {
+        _searching = false;
+        _failed = true;
+      });
+    }
+  }
+
+  Widget? _statusLine() {
+    if (_searching) return const LinearProgressIndicator(minHeight: 2);
+    if (_failed) {
+      return Row(
+        children: [
+          Text(
+            'ค้นหาไม่สำเร็จ',
+            style: AppTypography.base(12, color: AppColors.textSecondary),
+          ),
+          TextButton(onPressed: _search, child: const Text('ลองใหม่')),
+        ],
+      );
+    }
+    return null;
+  }
 
   void _back() {
     if (Navigator.of(context).canPop()) {
@@ -84,12 +146,13 @@ class _SearchScreenState extends State<SearchScreen> {
                           hint: 'ค้นหาคอร์ส, สกิล, อาจารย์...',
                           autofocus: widget.initialQuery.isEmpty,
                           textInputAction: TextInputAction.search,
-                          onChanged: (_) => setState(() {}),
+                          onChanged: _onChanged,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 14),
+                  if (_statusLine() case final status?) status,
                   Text(
                     'ผลการค้นหา (${results.length})',
                     style: AppTypography.base(14, weight: FontWeight.w600),
@@ -144,11 +207,12 @@ class _SearchScreenState extends State<SearchScreen> {
                           fontSize: 14,
                           autofocus: widget.initialQuery.isEmpty,
                           textInputAction: TextInputAction.search,
-                          onChanged: (_) => setState(() {}),
+                          onChanged: _onChanged,
                         ),
                       ),
                     ),
                     const SizedBox(height: 8),
+                    if (_statusLine() case final status?) status,
                     Text(
                       _controller.text.trim().isEmpty
                           ? 'พบ ${results.length} ผลลัพธ์'

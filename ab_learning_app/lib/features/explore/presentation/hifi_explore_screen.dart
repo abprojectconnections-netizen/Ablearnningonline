@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/di/app_dependencies.dart';
 import '../../../core/router/nav_targets.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/typography.dart';
@@ -12,6 +13,7 @@ import '../../../core/widgets/hifi_text_field.dart';
 import '../../../core/widgets/gradient_course_card.dart';
 import '../../../core/widgets/responsive.dart';
 import '../data/course_catalog_sample.dart';
+import '../data/explore_repository.dart';
 import 'course_filter_sheet.dart';
 import 'course_list_tile.dart';
 
@@ -27,6 +29,93 @@ class HifiExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<HifiExploreScreen> {
   int _category = 0;
   CourseFilter _filter = const CourseFilter();
+  List<ExploreCategory> _categories = [
+    for (final label in CourseCatalogSample.categories)
+      ExploreCategory(label: label),
+  ];
+  List<CatalogCourse>? _courses;
+  bool _failed = false;
+
+  ExploreRepository get _repo => AppDependencies.exploreRepository;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_repo.bundledOnly) {
+      // The bundled demo needs no network, so the first frame already has it.
+      _courses = CourseCatalogSample.all;
+    } else {
+      _loadCategories();
+      _loadCourses();
+    }
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final categories = await _repo.categories();
+      if (mounted) setState(() => _categories = categories);
+    } on Object catch (e) {
+      debugPrint('categories failed to load: $e');
+    }
+  }
+
+  Future<void> _loadCourses() async {
+    setState(() {
+      _courses = null;
+      _failed = false;
+    });
+    final slug =
+        _category < _categories.length ? _categories[_category].slug : null;
+    try {
+      final courses = await _repo.courses(category: slug);
+      if (!mounted) return;
+      setState(() => _courses = courses);
+    } on Object catch (e) {
+      debugPrint('explore failed to load: $e');
+      if (!mounted) return;
+      setState(() => _failed = true);
+    }
+  }
+
+  void _selectCategory(int i) {
+    if (i == _category) return;
+    setState(() => _category = i);
+    if (!_repo.bundledOnly) _loadCourses();
+  }
+
+  List<String> get _labels => [for (final c in _categories) c.label];
+
+  List<CatalogCourse> get _trending =>
+      (_courses ?? const <CatalogCourse>[]).take(2).toList();
+
+  /// Loading, error or empty content; null when there are courses to show.
+  Widget? _stateView() {
+    final courses = _courses;
+    if (courses != null && courses.isNotEmpty) return null;
+    final Widget content;
+    if (_failed) {
+      content = Column(
+        children: [
+          Text(
+            'โหลดคอร์สไม่สำเร็จ',
+            style: AppTypography.base(13, color: AppColors.textSecondary),
+          ),
+          TextButton(onPressed: _loadCourses, child: const Text('ลองใหม่')),
+        ],
+      );
+    } else if (courses == null) {
+      content = const CircularProgressIndicator();
+    } else {
+      content = Text(
+        'ยังไม่มีคอร์สในหมวดนี้',
+        style: AppTypography.base(13, color: AppColors.textSecondary),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Center(child: content),
+    );
+  }
 
   void _openSearch() => context.push('/search');
 
@@ -36,7 +125,7 @@ class _ExploreScreenState extends State<HifiExploreScreen> {
   }
 
   List<CatalogCourse> get _filteredAll =>
-      CourseCatalogSample.all.where(_filter.matches).toList();
+      (_courses ?? const <CatalogCourse>[]).where(_filter.matches).toList();
 
   Widget _categoryChips(List<String> categories) {
     return SingleChildScrollView(
@@ -48,7 +137,7 @@ class _ExploreScreenState extends State<HifiExploreScreen> {
             AppChip(
               label: categories[i],
               active: i == _category,
-              onTap: () => setState(() => _category = i),
+              onTap: () => _selectCategory(i),
             ),
           ],
         ],
@@ -96,11 +185,11 @@ class _ExploreScreenState extends State<HifiExploreScreen> {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: _categoryChips(
-                    CourseCatalogSample.categories.take(6).toList(),
-                  ),
+                  child: _categoryChips(_labels.take(6).toList()),
                 ),
-                const _MobileSectionTitle('กำลังมาแรง'),
+                if (_stateView() case final view?) view,
+                if (_trending.isNotEmpty)
+                  const _MobileSectionTitle('กำลังมาแรง'),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
@@ -108,21 +197,16 @@ class _ExploreScreenState extends State<HifiExploreScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        for (var i = 0;
-                            i < CourseCatalogSample.trending.length;
-                            i++) ...[
+                        for (var i = 0; i < _trending.length; i++) ...[
                           if (i > 0) const SizedBox(width: 12),
-                          _courseCard(
-                            context,
-                            CourseCatalogSample.trending[i],
-                            width: 180,
-                          ),
+                          _courseCard(context, _trending[i], width: 180),
                         ],
                       ],
                     ),
                   ),
                 ),
-                const _MobileSectionTitle('คอร์สทั้งหมด'),
+                if (_trending.isNotEmpty)
+                  const _MobileSectionTitle('คอร์สทั้งหมด'),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
@@ -191,13 +275,14 @@ class _ExploreScreenState extends State<HifiExploreScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    _categoryChips(CourseCatalogSample.categories),
+                    _categoryChips(_labels),
                     const SizedBox(height: 20),
                     Text(
                       'คอร์สทั้งหมด',
                       style: AppTypography.base(14, weight: FontWeight.w600),
                     ),
                     const SizedBox(height: 14),
+                    if (_stateView() case final view?) view,
                     CardGrid(
                       columns: 4,
                       children: [
