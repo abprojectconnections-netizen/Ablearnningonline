@@ -9,14 +9,18 @@ class CourseLessonRow {
     required this.duration,
     this.prefix = '▶',
     this.locked = false,
+    this.isQuiz = false,
   });
 
-  /// Route parameter for `/player/:id`.
+  /// Route parameter for `/player/:id` (or `/quiz/:id` when [isQuiz]).
   final String lessonId;
   final String prefix;
   final String title;
   final String duration;
   final bool locked;
+  final bool isQuiz;
+
+  String get route => isQuiz ? '/quiz/$lessonId' : '/player/$lessonId';
 }
 
 /// Everything the hi-fi Course detail screen shows that can come from the
@@ -113,6 +117,7 @@ class CourseContent {
             title: l.title,
             duration: l.durationLabel,
             locked: !_isOpen(l),
+            isQuiz: l.type == 'quiz',
           ),
       ],
       infoLines: '📹 ${_hoursMinutes(totalSeconds)} วิดีโอ\n'
@@ -141,7 +146,10 @@ class CourseContent {
 
   /// A lesson is playable when it is a free preview or the server sent its
   /// video (i.e. the learner is allowed to watch it).
-  static bool _isOpen(CatalogLesson l) => l.isPreview || l.videoUrl != null;
+  /// Quiz lessons are always open here: the server checks enrolment when the
+  /// answers are submitted and the quiz screen explains a refusal.
+  static bool _isOpen(CatalogLesson l) =>
+      l.type == 'quiz' || l.isPreview || l.videoUrl != null;
 
   static String _hoursMinutes(int seconds) {
     final h = seconds ~/ 3600;

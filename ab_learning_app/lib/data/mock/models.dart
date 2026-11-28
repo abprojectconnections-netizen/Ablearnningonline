@@ -97,11 +97,19 @@ class QuizAttemptResult {
     required this.correctCount,
     required this.totalCount,
     required this.selectedAnswers,
+    this.passed,
+    this.skills,
   });
+
+  /// Set when the server graded the attempt against the quiz's own pass mark.
+  final bool? passed;
+
+  /// Per-skill scores from the server; null for the bundled demo quiz.
+  final List<SkillScore>? skills;
 
   double get scorePercent => totalCount == 0 ? 0 : correctCount / totalCount;
 
-  bool get isPass => scorePercent >= 0.6;
+  bool get isPass => passed ?? scorePercent >= 0.6;
 }
 
 // --- RBAC -----------------------------------------------------------------

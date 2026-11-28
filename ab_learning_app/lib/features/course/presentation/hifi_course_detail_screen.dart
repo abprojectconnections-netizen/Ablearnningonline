@@ -424,9 +424,7 @@ class _CurriculumCard extends StatelessWidget {
     final color = lesson.locked ? AppColors.textSecondary : AppColors.text;
     return AppCard(
       // Spec 12: tapping an unlocked lesson row navigates straight to the player.
-      onTap: lesson.locked
-          ? null
-          : () => context.push('/player/${lesson.lessonId}'),
+      onTap: lesson.locked ? null : () => context.push(lesson.route),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

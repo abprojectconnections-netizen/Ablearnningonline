@@ -151,7 +151,7 @@ class QuizResultScreen extends StatelessWidget {
           const SizedBox(height: 28),
           const Text('วิเคราะห์ทักษะ', style: AppTypography.h2),
           const SizedBox(height: 12),
-          ...MockRepository.skillBreakdown.map(
+          ...(result.skills ?? MockRepository.skillBreakdown).map(
             (skill) => Padding(
               padding: const EdgeInsets.only(bottom: 14),
               child: Column(

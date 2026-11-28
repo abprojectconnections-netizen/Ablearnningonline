@@ -4,6 +4,7 @@ import '../../features/checkout/data/orders_repository.dart';
 import '../../features/explore/data/explore_repository.dart';
 import '../../features/learn/data/learn_repository.dart';
 import '../../features/notifications/data/notifications_repository.dart';
+import '../../features/quiz/data/quiz_repository.dart';
 import '../../features/reviews/data/reviews_repository.dart';
 import '../../features/tutor/data/tutor_repository.dart';
 import '../../features/wallet/data/wallet_repository.dart';
@@ -24,6 +25,7 @@ class AppDependencies {
   static ReviewsRepository? _reviews;
   static LearnRepository? _learn;
   static ExploreRepository? _explore;
+  static QuizRepository? _quiz;
 
   /// One client (and token store) shared by every API repository.
   static RestClient get apiClient =>
@@ -90,6 +92,13 @@ class AppDependencies {
 
   static set exploreRepository(ExploreRepository value) => _explore = value;
 
+  /// Only used for lessons that live on the server; the bundled demo quiz
+  /// never calls it, so there is no offline variant.
+  static QuizRepository get quizRepository =>
+      _quiz ??= ApiQuizRepository(apiClient);
+
+  static set quizRepository(QuizRepository value) => _quiz = value;
+
   static void reset() {
     _client = null;
     _auth = null;
@@ -101,5 +110,6 @@ class AppDependencies {
     _reviews = null;
     _learn = null;
     _explore = null;
+    _quiz = null;
   }
 }

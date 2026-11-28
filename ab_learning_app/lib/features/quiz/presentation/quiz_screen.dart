@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../core/di/app_dependencies.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/radius.dart';
 import '../../../core/theme/typography.dart';
 import '../../../data/mock/mock_repository.dart';
 import '../../../data/mock/models.dart';
+import '../data/quiz_repository.dart';
 
 /// Screen 14 — Quiz. Single-select MCQ flow with a Previous/Next footer and
 /// Submit on the last question.
@@ -18,13 +21,57 @@ class QuizScreen extends StatefulWidget {
 }
 
 class _QuizScreenState extends State<QuizScreen> {
-  final List<QuizQuestion> _questions = MockRepository.sampleQuiz;
-  late final List<int?> _selected = List.filled(_questions.length, null);
+  /// Set for a lesson that lives on the server (numeric id, online).
+  late final int? _apiLessonId = AppDependencies.catalogRepository.bundledOnly
+      ? null
+      : int.tryParse(widget.lessonId);
+
+  List<QuizQuestion> _questions = MockRepository.sampleQuiz;
+  late List<int?> _selected = List.filled(_questions.length, null);
   int _index = 0;
+  LessonQuiz? _quiz;
+  QuizLoadError? _loadError;
+  bool _submitting = false;
+
+  bool get _fromApi => _apiLessonId != null;
 
   QuizQuestion get _current => _questions[_index];
 
-  void _submit() {
+  @override
+  void initState() {
+    super.initState();
+    if (_fromApi) {
+      _questions = const [];
+      _selected = const [];
+      _load();
+    }
+  }
+
+  Future<void> _load() async {
+    setState(() => _loadError = null);
+    try {
+      final quiz =
+          await AppDependencies.quizRepository.forLesson(_apiLessonId!);
+      if (!mounted) return;
+      setState(() {
+        _quiz = quiz;
+        _questions = quiz.questions;
+        _selected = List.filled(quiz.questions.length, null);
+        _index = 0;
+        if (quiz.questions.isEmpty) _loadError = QuizLoadError.notFound;
+      });
+    } on QuizException catch (e) {
+      if (!mounted) return;
+      setState(() => _loadError = e.load ?? QuizLoadError.failed);
+    }
+  }
+
+  Future<void> _submit() async {
+    final quiz = _quiz;
+    if (quiz != null) {
+      await _submitToServer(quiz);
+      return;
+    }
     final lesson = MockRepository.lessonById(widget.lessonId);
     if (lesson != null) {
       MockRepository.completeLesson(lesson.id);
@@ -51,13 +98,75 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
+  /// The server grades; correct answers only arrive with the result.
+  Future<void> _submitToServer(LessonQuiz quiz) async {
+    if (_submitting) return;
+    setState(() => _submitting = true);
+    try {
+      final graded = await AppDependencies.quizRepository.submit(
+        quiz,
+        _selected,
+      );
+      if (!mounted) return;
+      context.pushReplacement(
+        '/quiz-result',
+        extra: {
+          'result': graded.result,
+          'questions': graded.questions,
+          'lessonId': widget.lessonId,
+        },
+      );
+    } on QuizException catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      final text = e.submit == QuizSubmitError.notEnrolled
+          ? 'ทำแบบทดสอบได้เฉพาะผู้ที่ลงทะเบียนคอร์สนี้'
+          : 'ส่งคำตอบไม่สำเร็จ ลองอีกครั้ง';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(text)),
+      );
+    }
+  }
+
+  /// Loading or error screen for a server quiz; null once it is loaded.
+  Widget? _apiStateView() {
+    if (!_fromApi || (_quiz != null && _loadError == null)) return null;
+    final Widget body;
+    if (_loadError == QuizLoadError.notFound) {
+      body = Text(
+        'บทเรียนนี้ยังไม่มีแบบทดสอบ',
+        style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+      );
+    } else if (_loadError == QuizLoadError.failed) {
+      body = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'โหลดแบบทดสอบไม่สำเร็จ',
+            style: AppTypography.body.copyWith(color: AppColors.textSecondary),
+          ),
+          TextButton(onPressed: _load, child: const Text('ลองใหม่')),
+        ],
+      );
+    } else {
+      body = const CircularProgressIndicator();
+    }
+    return Scaffold(
+      appBar: AppBar(title: const Text('แบบทดสอบ')),
+      body: Center(child: body),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final state = _apiStateView();
+    if (state != null) return state;
     final lesson = MockRepository.lessonById(widget.lessonId);
+    final title = _quiz?.title ?? lesson?.title ?? 'แบบทดสอบ';
     final isLastQuestion = _index == _questions.length - 1;
 
     return Scaffold(
-      appBar: AppBar(title: Text(lesson?.title ?? 'แบบทดสอบ')),
+      appBar: AppBar(title: Text(title)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -152,7 +261,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 if (_index > 0) const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _selected[_index] == null
+                    onPressed: _selected[_index] == null || _submitting
                         ? null
                         : () {
                             if (isLastQuestion) {

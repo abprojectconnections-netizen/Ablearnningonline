@@ -134,7 +134,9 @@ class _VideoPlayerScreenState extends State<HifiVideoPlayerScreen> {
       _showCourseCompleteDialog();
       return;
     }
-    context.push('/player/${next.id}');
+    context.push(
+      next.type == 'quiz' ? '/quiz/${next.id}' : '/player/${next.id}',
+    );
   }
 
   void _showCourseCompleteDialog() {
